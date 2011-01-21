@@ -10,11 +10,32 @@ interfacing with C programs, i.e. through ctypes."""
 
 import re as _re
 
+_INCLUDE_PATH = "/usr/include/asm-generic/"
+
+_DESC = dict()
+# This is less complicated than it looks.
+_r= _re.compile(r"^#define\s*([A-Z]+)\s*(\d+)\s*/\*\s*(.*?)\s*\*/\s*$")
+for _f in (open(_INCLUDE_PATH+_) for _ in ("errno.h", "errno-base.h")):
+    for _m in filter(None, (_r.match(_l) for _l in _f)):
+        # for every line in <errno.h> and <errno-base.h> that matches _r
+        _name, _value, _description = _m.groups()
+
+        if _value.startswith("0x"):
+            _value = int(_value, 16)
+        else:
+            _value = int(_value, 10)
+
+        _DESC[int(_value)] = (_name, _description)
+
+# _DESC now looks something like this:
+#   {
+#
+#   }
+
 class CError(Exception):
-    def __init__(self, name, value, comment, extra=None):
-        self.value = int(value)
-        self.name = name
-        self.comment = comment
+    def __init__(self, errno, extra=None):
+        self.value = errno
+        self.name, self.comment = _DESC[errno]
         self.extra = extra
 
         super().__init__(str(self))
@@ -36,18 +57,9 @@ class CError(Exception):
 
     def __call__(self, msg=None):
         if msg:
-            return type(self)(self.name, self.value, self.comment, msg)
+            return type(self)(self.value, msg)
         else:
             return self
 
-
-# This is less complicated than it looks.
-_regexp = _re.compile( r"^#define\s*([A-Z]+)\s*(\d+)\s*/\*\s*(.*?)\s*\*/\s*$" )
-
-for _ in ("errno.h", "errno-base.h"):
-    with open("/usr/include/asm-generic/"+_) as _f:
-        for _l in _f:
-            _m = _regexp.match(_l)
-            if _m:
-                _name, _value, _comment = _m.groups()
-                globals()[_name] = CError(_name, _value, _comment)
+for _err in (CError(_) for _ in _DESC):
+    globals()[_err.name] = _err
