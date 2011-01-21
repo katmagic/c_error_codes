@@ -29,7 +29,10 @@ for _f in (open(_INCLUDE_PATH+_) for _ in ("errno.h", "errno-base.h")):
 
 # _DESC now looks something like this:
 #   {
-#
+#       1: ('EPERM', 'Operation not permitted'),
+#       2: ('ENOENT', 'No such file or directory'),
+#       3: ('ESRCH', 'No such process'),
+#       ...
 #   }
 
 class CError(Exception):
